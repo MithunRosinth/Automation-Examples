@@ -1,0 +1,28 @@
+---
+
+- name: Docker Setup
+  hosts: azure_vm
+  tasks:
+    - name : Download docker convinience script
+      command : curl -fsSL https://get.docker.com -o get-docker.sh
+      any_errors_fatal: true
+    - name : Make script executable
+      command : chdir=/home/azureuser chmod +x get-docker.sh
+    - name : Run convinience script
+      become : yes
+      command : chdir=/home/azureuser ./get-docker.sh
+      any_errors_fatal: true
+    - name : Add user to docker group
+      become : yes
+      command : usermod -aG docker azureuser
+      any_errors_fatal: true
+    - name : Install docker-compose
+      become : yes
+      apt :
+        name : docker-compose
+        state : latest 
+      any_errors_fatal: true
+    - name : Reboot the machine
+      become : yes
+      reboot :
+        reboot_timeout : 300
