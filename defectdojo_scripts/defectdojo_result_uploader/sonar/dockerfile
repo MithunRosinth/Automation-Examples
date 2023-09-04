@@ -1,0 +1,18 @@
+FROM python:3.9-slim-bullseye
+
+RUN usermod -s /usr/sbin/nologin root
+RUN adduser sidecar
+
+RUN mkdir /results
+VOLUME /results
+COPY ./defectdojo_sonar.py ./
+RUN chown -R sidecar /results
+RUN chown -R sidecar /defectdojo_sonar.py
+
+USER sidecar
+
+RUN pip3 install requests_toolbelt requests
+RUN chmod +x /defectdojo_sonar.py
+ENV PYTHONUNBUFFERED=1
+
+ENTRYPOINT [ "python", "/defectdojo_sonar.py" ]

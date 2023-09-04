@@ -15,7 +15,7 @@ resource "helm_release" "kubernetes_dashboard" {
 ## Specific to azure dns
 ##  set {
 ##    name ="service.annotations.service\\.beta\\.kubernetes\\.io/azure-dns-label-name"
-##    value = local.kube_dns_label
+##    value = <Value>
 ##  }  
   set {
     name  = "protocolHttp"

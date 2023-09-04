@@ -1,0 +1,15 @@
+FROM python:3.9-slim-bullseye
+
+RUN usermod -s /usr/sbin/nologin root
+RUN adduser sidecar
+
+COPY ./defectdojo_init.py ./
+RUN chown -R sidecar /defectdojo_init.py
+
+USER sidecar
+
+RUN pip3 install requests_toolbelt requests
+RUN chmod +x /defectdojo_init.py
+ENV PYTHONUNBUFFERED=1
+
+ENTRYPOINT [ "python", "/defectdojo_init.py" ]
