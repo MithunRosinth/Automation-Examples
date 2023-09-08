@@ -1,7 +1,7 @@
 ---
 
 - name: Docker Setup
-  hosts: azure_vm
+  hosts: machine
   tasks:
     - name : Download docker convinience script
       command : curl -fsSL https://get.docker.com -o get-docker.sh

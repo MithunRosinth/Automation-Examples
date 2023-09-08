@@ -1,0 +1,62 @@
+trigger:
+- dev
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+      GIT_COMMIT=$(git rev-parse --short HEAD)
+      
+      echo "GIT_COMMIT: ${GIT_COMMIT}"
+      
+      echo "##vso[task.setvariable variable=GIT_COMMIT]${GIT_COMMIT}"
+- task: SSH@0
+  inputs:
+    sshEndpoint: 'Closet-Bastion SSH'
+    runOptions: 'commands'
+    commands: |
+      mkdir -p pipelines/pipeline-$(GIT_COMMIT)
+      mkdir pipelines/pipeline-$(GIT_COMMIT)/config
+      mkdir pipelines/pipeline-$(GIT_COMMIT)/secrets
+      mkdir pipelines/pipeline-$(GIT_COMMIT)/.kube
+    readyTimeout: '20000'
+
+- task: DownloadSecureFile@1
+  name: pipeline_config
+  displayName: Download Pipeline Config
+  inputs:
+    secureFile: 'config.yaml'
+
+- task: CopyFilesOverSSH@0
+  inputs:
+    sshEndpoint: 'Closet-Bastion SSH'
+    sourceFolder: '$(Agent.TempDirectory)'
+    contents: 'config.yaml'
+    targetFolder: 'pipelines/pipeline-$(GIT_COMMIT)/config'
+    readyTimeout: '20000'
+
+- task: DownloadSecureFile@1
+  name: cluster
+  displayName: Download cluster config
+  inputs:
+    secureFile: 'config'
+
+- task: CopyFilesOverSSH@0
+  inputs:
+    sshEndpoint: 'Closet-Bastion SSH'
+    sourceFolder: '$(Agent.TempDirectory)'
+    contents: 'config'
+    targetFolder: 'pipelines/pipeline-$(GIT_COMMIT)/.kube'
+    readyTimeout: '20000'
+
+- task: SSH@0
+  inputs:
+    sshEndpoint: 'Closet-Bastion SSH'
+    runOptions: 'commands'
+    commands: |
+      docker run -e GIT_COMMIT=$(GIT_COMMIT) -v /home/azureuser/pipelines/pipeline-$(GIT_COMMIT)/.kube:/home/closet-admin/.kube -v /home/azureuser/pipelines/pipeline-$(GIT_COMMIT)/config:/home/closet-admin/config -v /home/azureuser/pipelines/pipeline-$(GIT_COMMIT)/secrets:/home/closet-admin/secrets -v /home/azureuser/pipelines:/home/closet-admin/pipelines --name $(GIT_COMMIT) devsecopscloset/closet_deploy:v1 
+    readyTimeout: '20000'

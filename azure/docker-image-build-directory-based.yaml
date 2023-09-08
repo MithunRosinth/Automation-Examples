@@ -1,0 +1,110 @@
+trigger:
+  branches:
+    include:
+    - revamp
+  paths:
+    include:
+    - images/defectdojo_result_uploader/defectdojo_init/*
+    - images/defectdojo_result_uploader/sonar/*
+    - images/defectdojo_result_uploader/zap/*
+    - images/defectdojo_result_uploader/trivy/*
+
+jobs:
+- job: getchangepath
+  pool:
+    vmImage: 'windows-latest'
+  steps: 
+  - powershell: |
+      $url="$(System.CollectionUri)/$(System.TeamProject)/_apis/git/repositories/$(Build.Repository.ID)/commits/$(Build.SourceVersion)/changes?api-version=5.1"
+      $result = Invoke-RestMethod -Uri $url -Headers @{Authorization = "Bearer $(System.AccessToken)"} -Method GET
+                       
+      $changesFolder = $result.changes | Where-Object{$_.item.gitObjectType -match "tree"} | Select-Object -Property {$_.item.path}
+     
+      foreach($path in $changesFolder){
+        if($path -match '/images/defectdojo_result_uploader/defectdojo_init'){
+          echo "##vso[task.setvariable variable=init;isOutput=true]$True"
+          break
+        }
+      }
+
+      foreach($path in $changesFolder){
+        if($path -match '/images/defectdojo_result_uploader/sonar'){
+          echo "##vso[task.setvariable variable=sonar;isOutput=true]$True"
+          break
+        }
+      }
+      
+      foreach($path in $changesFolder){
+        if($path -match '/images/defectdojo_result_uploader/zap'){
+          echo "##vso[task.setvariable variable=zap;isOutput=true]$True"
+          break
+        }
+      }
+
+      foreach($path in $changesFolder){
+        if($path -match '/images/defectdojo_result_uploader/trivy'){
+          echo "##vso[task.setvariable variable=trivy;isOutput=true]$True"
+          break
+        }
+      }
+    name: MyVariable
+
+- job: init
+  pool :
+    vmImage: 'ubuntu-latest'
+  dependsOn: getchangepath
+  condition: eq(dependencies.getchangepath.outputs['Myvariable.init'], 'true')
+  steps:
+  - task: Docker@2
+    inputs:
+      containerRegistry: 'Docker Hub'
+      repository: 'devsecopscloset/closet_defectdojo_init'
+      command: 'buildAndPush'
+      Dockerfile: '**/images/defectdojo_result_uploader/defectdojo_init/dockerfile'
+      buildContext: '**/images/defectdojo_result_uploader/defectdojo_init'
+      tags: 'revamp'
+  
+- job: sonar
+  pool :
+    vmImage: 'ubuntu-latest'
+  dependsOn: getchangepath
+  condition: eq(dependencies.getchangepath.outputs['Myvariable.sonar'], 'true')
+  steps:
+  - task: Docker@2
+    inputs:
+      containerRegistry: 'Docker Hub'
+      repository: 'devsecopscloset/closet_defectdojo_sonar'
+      command: 'buildAndPush'
+      Dockerfile: '**/images/defectdojo_result_uploader/sonar/dockerfile'
+      buildContext: '**/images/defectdojo_result_uploader/sonar'
+      tags: 'revamp'
+
+- job: zap
+  pool :
+    vmImage: 'ubuntu-latest'
+  dependsOn: getchangepath
+  condition: eq(dependencies.getchangepath.outputs['Myvariable.zap'], 'true')
+  steps:
+  - task: Docker@2
+    inputs:
+      containerRegistry: 'Docker Hub'
+      repository: 'devsecopscloset/closet_defectdojo_zap'
+      command: 'buildAndPush'
+      Dockerfile: '**/images/defectdojo_result_uploader/zap/dockerfile'
+      buildContext: '**/images/defectdojo_result_uploader/zap'
+      tags: 'revamp'
+
+- job: trivy
+  pool :
+    vmImage: 'ubuntu-latest'
+  dependsOn: getchangepath
+  condition: eq(dependencies.getchangepath.outputs['Myvariable.trivy'], 'true')
+  steps:
+  - task: Docker@2
+    inputs:
+      containerRegistry: 'Docker Hub'
+      repository: 'devsecopscloset/closet_defectdojo_trivy'
+      command: 'buildAndPush'
+      Dockerfile: '**/images/defectdojo_result_uploader/trivy/dockerfile'
+      buildContext: '**/images/defectdojo_result_uploader/trivy'
+      tags: 'revamp'
